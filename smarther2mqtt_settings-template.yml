@@ -1,0 +1,90 @@
+# ┌──────────────────────────────────────────────────────────┐
+# │ General settings                                         │
+# └──────────────────────────────────────────────────────────┘
+
+# Set to True to enable debug logging level
+debug: False
+
+# The following settings are only required in case Telegram is used
+# as a notification channel to bring messages from smarther2mqtt to
+# the user's attention (most notably, a request to grant access to
+# the Netatmo Connect API)
+#telegram:
+#  bot_token: 'YOUR_TELEGRAM_BOT_TOKEN'
+#  # The chat_id can be obtained by using the IDBot
+#  # https://telegram.me/myidbot
+#  chat_id: 'YOUR_CHAT_ID'
+
+
+# ┌──────────────────────────────────────────────────────────┐
+# │ Netatmo Connect cloud settings                           │
+# └──────────────────────────────────────────────────────────┘
+
+# When an Oauth2 token is first obtained from the Netatmo API, a temporary web
+# server is launched to serve a one-time callback URL that is used to acquire the
+# authorization code. The IP address and port that this web server is bound to
+# are configured in the following settings
+oauth_code_endpoint:
+  ipaddress: 'HOST_IP_ADDRESS'
+  port: 9090
+
+netatmo:
+  # Name of the file where the Netatmo OAuth2 token will be stored
+  token_file: 'netatmo_token'
+  # Parameters of the application registered with the Netatmo API
+  clientid: 'YOUR_APPLICATION_CLIENT_ID'
+  clientsecret: 'YOUR_APPLICATION_CLIENT_SECRET'
+
+  # Identifier of the home to retrieve information for
+  homeid: 'YOUR_HOME_ID'
+  # Identifier of the room where the thermostat is located
+  roomid: 'YOUR_ROOM_IF'
+
+  # Smarther2 chronothermostat status will be periodically refreshed every time the
+  # interval indicated below (in seconds) expires. Beware of the rate limits
+  # imposed by the Netatmo Smart Home API
+  # (https://dev.netatmo.com/guideline#rate-limits, case of less than 100 users):
+  # - Max 200 requests every 10 seconds (20 per second, easy to stay within)
+  # - Max 2000 requests per hour (means ~33 per minute, namely ~one every 2 seconds)
+  # Per-user limits also apply:
+  # - Max 50 requests every 10 seconds (5 per second)
+  # - Max 500 requests per hour (means ~8 per minute, namely ~one every 8 seconds)
+  # It should be fairly hard to overcome these limits but, as a general advice,
+  # this interval should not be set to any values lower than 10 (seconds)
+  polling_interval: 10
+
+  # To help stay within the aforementioned rate limits, before sending
+  # certain requests to the Netatmo API a minimum time window of "silence"
+  # is awaited. If two consecutive requests are too close to each other
+  # (for example because two messages have been quickly published on an MQTT
+  # channel), smarther2mqtt stores the desired target status enforced by
+  # these requests, waits for the time set below and, in case no further
+  # requests are received within this time window, issues a single request
+  # that sets the target status. In case another request is received, the
+  # time countdown is set again to the following value (in seconds)
+  min_request_idle_time: 3
+
+
+# ┌──────────────────────────────────────────────────────────┐
+# │ MQTT settings                                            │
+# └──────────────────────────────────────────────────────────┘
+
+# Hostname and port of the MQTT broker. The port is optional, and 1883 is
+# used in case it is not set otherwise
+mqtt:
+  broker:
+    ipaddress: '127.0.0.1'
+    # port: 1883
+  publish_topics:
+    # MQTT topics that current readings are published to
+    base_topic: 'smarther2/thermostat1/sensors'
+    temperature: 'temperature'
+    humidity: 'humidity'
+    temperature_setpoint: 'temperature_setpoint'
+    mode: 'mode'
+  subscribe_topics:
+    # MQTT topics that are used to receive commands from the MQTT broker
+    base_topic: 'smarther2/thermostat1/commands'
+    temperature_setpoint: 'temperature_setpoint'
+    mode: 'mode'
+...
