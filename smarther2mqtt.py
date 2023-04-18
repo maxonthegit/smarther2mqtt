@@ -109,6 +109,10 @@ def main():
             stop_thread.set()
             mqttc.disconnect()
             return
+        except Exception as e:
+            log.error("Unknown exception occurred: %s" % repr(e))
+            log.debug("Waiting 5 seconds and restarting the loop")
+            time.sleep(5)
 
 
 
