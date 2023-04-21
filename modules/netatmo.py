@@ -239,6 +239,10 @@ class NetatmoToken:
                         self.refresh_token()
                         log.info("Token successfully refreshed. Attempting to repeat last HTTP request")
                         return self.netatmo_api_call(url, second_attempt=True)
+                if r.status_code >= 500 and r.status_code <=599:
+                    # Likely a temporary server error
+                    log.warn("Possible server error: failing silently")
+                    return r.text
                 log.error("This error cannot be handled")
                 raise
             else:
