@@ -1,5 +1,7 @@
 import logging, yaml, requests, re
 import paho.mqtt.client as mqtt
+from random import choices
+from string import ascii_letters, digits
 
 # A mapping between user-provided mode and modes documented in the Netatmo
 # Connect API specification (https://dev.netatmo.com/apidocumentation/control#homestatus)
@@ -48,7 +50,11 @@ class TelegramRequester:
 # Set up connection to the MQTT broker
 def mqtt_init():
     log.debug("Initializing connection to the MQTT broker")
-    mqttc = mqtt.Client()
+    # A client_id is required in order to preserve topic subscriptions in case
+    # connection with the broker is lost and restored. To limit the likeliness
+    # of collision with other instances of smarther2mqtt, a random client_id is
+    # generated here
+    mqttc = mqtt.Client(client_id = 'smarther2mqtt_' + ''.join(choices(ascii_letters + digits, k=10)), clean_session = False)
     mqttc.enable_logger(log)
     mqttc.connect(settings['mqtt']['broker']['ipaddress'], port=(settings['mqtt']['broker']['port'] if 'port' in settings['mqtt']['broker'] else 1883))
     return mqttc

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import time, json, requests, signal
-from threading import Thread, Event
+from threading import Thread
 from modules.utilities import log, settings, mqtt_init, mode_user_to_NA, mode_NA_to_user, LogRequester, TelegramRequester, signal_to_interrupt
 from modules.netatmo import NetatmoToken
 
@@ -40,35 +40,20 @@ def handle_received_command(client, userdata, message):
         # catched
         pass
 
-def subscriber_loop(mqttc, stop):
-    while not stop.is_set():
-        try:
-            log.debug("(Re)starting subscriber thread loop")
-            while not stop.is_set():
-                # Process incoming messages (loop() is a blocking function)
-                mqttc.loop()
-        except Exception:
-            mqttc.reconnect()
-        
 
 def main():
     log.debug("Netatmo token exists: %s", netatmo.token_exists())
     if not netatmo.token_exists():
         obtain_netatmo_token(netatmo)
 
-    stop_thread = Event()
-
-    # Subscribe to selected MQTT topics for which messages are expected from
-    # the broker
-    base_topic = settings['mqtt']['subscribe_topics']['base_topic']
     mqttc = mqtt_init()
+    base_topic = settings['mqtt']['subscribe_topics']['base_topic']
+    # Subscribe to selected MQTT topics for which messages are expected from the broker
     mqttc.subscribe(base_topic + '/+', 0)
+    # Set up a callback function to handle received messages
     mqttc.message_callback_add(base_topic + '/+', handle_received_command)
 
-    log.debug("Initializing subscriber thread")
-
-    sub_thread = Thread(target=subscriber_loop, args=[mqttc, stop_thread])
-    sub_thread.start()  
+    mqttc.loop_start()
 
     log.info("Starting polling cycle")
     while True:
@@ -106,8 +91,7 @@ def main():
             log.debug("Obtaining a new token and restarting the loop")
             obtain_netatmo_token(netatmo)
         except KeyboardInterrupt:
-            stop_thread.set()
-            mqttc.disconnect()
+            mqttc.loop_stop()
             return
         except Exception as e:
             log.error("Unknown exception occurred: %s" % repr(e))
