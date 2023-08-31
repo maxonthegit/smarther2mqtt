@@ -326,6 +326,7 @@ class NetatmoToken:
                 self.target_temperature = target_temperature
                 self.last_set_temperature = self.target_temperature
                 self.target_mode = "manual"
+                self.last_set_mode = self.target_mode
                 self.schedule_thermostat_update()
 
     # Change the thermostat's operational mode.
