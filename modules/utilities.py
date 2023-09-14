@@ -45,7 +45,7 @@ class TelegramRequester:
             'text': message
         }
         log.debug("Sending telegram message by using the following URL: %s and JSON data: %s" % (telegram_base_url, repr(json_dict)))
-        requests.post(telegram_base_url, json=json_dict)
+        requests.post(telegram_base_url, json=json_dict, timeout=20)
 
 # Set up connection to the MQTT broker
 def mqtt_init():

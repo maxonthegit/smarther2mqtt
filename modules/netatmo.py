@@ -164,7 +164,7 @@ class NetatmoToken:
                 'scope': 'read_smarther write_smarther'
             }
             log.debug("Requesting token from %s with data: %s" % (self.NETATMO_TOKEN_URL, repr(token_request_data)))
-            r = requests.post(self.NETATMO_TOKEN_URL, data=token_request_data)
+            r = requests.post(self.NETATMO_TOKEN_URL, data=token_request_data, timeout=20)
             # Raise exception in case something went wrong
             r.raise_for_status()
         except requests.ConnectionError as e:
@@ -192,7 +192,7 @@ class NetatmoToken:
                 'client_secret': self.CLIENT_SECRET
             }
             log.debug("Refreshing token from %s with data: %s" % (self.NETATMO_TOKEN_URL, repr(token_refresh_data)))
-            r = requests.post(self.NETATMO_TOKEN_URL, data=token_refresh_data)
+            r = requests.post(self.NETATMO_TOKEN_URL, data=token_refresh_data, timeout=20)
             # Raise exception in case something went wrong
             r.raise_for_status()
         except requests.ConnectionError as e:
@@ -221,10 +221,10 @@ class NetatmoToken:
         try:
             if request_parameters:
                 log.debug("Sending request to %s with headers %s and parameters %s" % (url, request_headers, repr(request_parameters)))
-                r = requests.post(url, headers=request_headers, json=request_parameters)
+                r = requests.post(url, headers=request_headers, json=request_parameters, timeout=20)
             else:
                 log.debug("Sending request to %s with headers %s" % (url, request_headers))
-                r = requests.get(url, headers=request_headers)
+                r = requests.get(url, headers=request_headers, timeout=20)
             r.raise_for_status()
         except requests.ConnectionError as e:
             log.error("Error while performing API call %s: %s" % (url, repr(e)))
