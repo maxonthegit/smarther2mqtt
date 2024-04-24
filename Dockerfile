@@ -1,9 +1,7 @@
 FROM alpine
 
 RUN apk update
-RUN apk add python3 py3-pip py3-requests py3-yaml openssl
-RUN pip install --upgrade pip wheel
-RUN pip install --upgrade paho-mqtt
+RUN apk add python3 py3-requests py3-yaml openssl py3-paho-mqtt
 
 ADD smarther2mqtt.py /
 ADD modules/ /modules/
