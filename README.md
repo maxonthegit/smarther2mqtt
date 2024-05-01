@@ -100,20 +100,52 @@ The message that invites to contact the URL is similar to the following:
 Just access the URL, authenticate yourself on the Netatmo Connect cloud, grant the requested access and you are done.
 
 ## 5. Install the [MQTT binding][openhab-mqtt] in [openHAB][openhab]
-From the _Settings_/_Bindings_ menu of openHAB, install the [MQTT binding][openhab-mqtt] binding.
+From the _Settings_/_Bindings_ menu of openHAB, install the [MQTT binding][openhab-mqtt].
 
 ## 6. Configure things and items in openHAB
 Configure things and item as follows:
 * Add a new `mqtt:broker` thing (bridge) and configure it to point to the IP address (and, if required, port) of your MQTT broker. Review and tune the other parameters to make sure that the thing status is _Online_. Unless explicitly required, it should be perfectly fine to use QoS `0` here, especially if the MQTT broker is running on the same host.
 * Add another _Generic MQTT_ thing (`mqtt:topic`) and configure it to use the _MQTT broker_ added above as bridge.
-* Edit the freshly added _Generic MQTT_ thing and open its _Channels_ tab. For each topic in the `smarther2mqtt` configuration file (both `publish_topics` and `subscribe_topics`) add a new _Channel_, picking its parameters as follows:
+* Edit the freshly added _Generic MQTT_ thing and open its _Channels_ tab (see also the [applicable section of the MQTT Things and Channels Binding guide](https://www.openhab.org/addons/bindings/mqtt.generic/#supported-things)). For each topic in the `smarther2mqtt` configuration file (both `publish_topics` and `subscribe_topics`) add a new _Channel_, picking its parameters as follows:
   * identifiers and labels can be arbitrary, but pick ones that will be easy to recognize later on
   * channel types should be quite obvious: temperature and humidity topics will use numbers, whereas mode will use strings
   * for each of the temperature and humidity topics just indicate the corresponding `publish_topic` from the `smarther2mqtt` configuration file as _status_ topic in each channel's settings
   * for each of the temperature setpoint and mode topics indicate the corresponding pair of `publish_topic` and `subscribe_topic` from the `smarther2mqtt` configuration file as _status_ and _command_ topics, respectively, in each channel's settings: for example, create a single channel to represent the temperature setpoint where you set `smarther2/thermostat1/sensors/temperature_setpoint` as _status_ topic and `smarther2/thermostat1/commands/temperature_setpoint` as _command_ topic
   * optionally, for the channel that represents the thermostat's operational mode you can indicate the following list of _Allowed states_ in the _Advanced options_ section: `AUTO,MANUAL,BOOST,OFF`. This will allow to easily set the state from the openHAB GUI
   * always indicate the full topic path (e.g., `smarther2/thermostat1/sensors/temperature`) in each channel
+  * it is perfectly fine _not_ to set any `qos` value for the channel, thus letting the default one from the broker thing be applied
+  * do _not_ set the `retained` flag on any of the created channels: it is pointless for channels used to get readings from the thermostat, and it may have adverse effects for channels used to send commands to the thermostat (see [Synchronization Logic](#synchronization-logic) below)
 * Create a new item for each of the channels created above. For convenience, it is possible to use the _Create Points from Thing_ button to accomplish this. Item types should be selected according to the corresponding channels (for example, temperature setpoint must be a setpoint, while mode must be a string).
+
+### Synchronization logic
+Once this setup stage is reached, the [Smarther2][smarther2] thermostat can be controlled and its status be monitored through 3 different interfaces:
+1. the Legrand/Netatmo/BTicino Home+Control mobile app
+2. Apple HomeKit (or, possibly, Google Home)
+3. the MQTT topics exposed by `smarther2mqtt`
+
+While interfaces 1 and 2 are natively paired, it is natural to wonder how `smarther2mqtt` is expected to interact with them.
+
+#### Status Readings
+All thermostat readings are made available through all the three aforementioned interfaces: they should all return the same readings at any time, regardless of which one is queried. \
+As a minor exception, status information published by `smarther2mqtt` via MQTT may be refreshed with a slight delay due to the setting of its internal parameter `netatmo`/`polling_interval`.
+
+#### Commands
+As a general rule, the latest requested (temperature/mode) change is always applied, regardless of the interface it was received through. \
+However, a couple of additional mechanisms should be considered:
+* Messages published on the MQTT topics used to receive temperature/mode commands (`subscribe_topics`) need not and should _never_ have the [retained](https://www.hivemq.com/blog/mqtt-essentials-part-8-retained-messages/) flag set; channels of the openHAB thing should be configured accordingly. \
+In fact, if a retained message is published on any of the `subscribe_topics`, this message becomes "sticky" and is sent to any new subscribers, even if they connect to the MQTT broker after the message has been sent. Although in principle this is not harmful, the retained message would be fetched by `smarther2mqtt` every time it starts up (for example, in the event of a reboot of the device that `smarther2mqtt` is executed on), causing unintentional overrides of the current thermostat operational mode. \
+Checking whether a retained message exists can be accomplished by simply subscribing to a topic with an appropriate filter: if a message is immediately received, then that message was set to be retained. For example:
+  ```
+  mosquitto_sub --retained-only -t smarther2/thermostat1/commands/temperature_setpoint
+  13.5 <===== retained message
+  ```
+  In case a retained message has been mistakenly sent to one of the `subscribe_topics`, it can be cleared by using a command similar to the following:
+  ```
+  mosquitto_pub -n -r -t smarther2/thermostat1/commands/TOPIC_TO_BE_CLEARED
+  ```
+* Similarly to environmental readings, also the last issued command is always synchronized among the 3 aforementioned interfaces. Therefore, changes requested via the Home+Control app are also reflected in the temperature setpoint item in openHAB. \
+Also in this case, the refresh may take a short time due to the `polling_interval` setting.
+
 
 # Testing and troubleshooting
 Assuming that the [Mosquitto][mosquitto] MQTT broker is being used, it is possible to verify which messages are exchanged by `smarther2mqtt` by installing the `mosquitto-clients` package and running commands similar to the following:
