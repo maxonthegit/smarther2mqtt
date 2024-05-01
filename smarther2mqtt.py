@@ -79,8 +79,10 @@ def main():
                 mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['humidity'], payload = room_status['humidity'], retain = True)
                 if not netatmo.temperature_update_pending():
                     mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['temperature_setpoint'], payload = room_status['therm_setpoint_temperature'], retain = True)
+                    netatmo.update_temperature(room_status['therm_setpoint_temperature'])
                 if not netatmo.mode_update_pending():
                     mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['mode'], payload = mode_NA_to_user[room_status['therm_setpoint_mode']], retain = True)
+                    netatmo.update_mode(room_status['therm_setpoint_mode'])
 
                 time.sleep(settings['netatmo']['polling_interval'])
         except requests.ConnectionError as e:

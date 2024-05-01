@@ -323,11 +323,14 @@ class NetatmoToken:
             # Check if temperature has really changed since the last time it
             # has been set. This is useful to avoid publish/subscribe loops
             if target_temperature != self.last_set_temperature:
+                log.debug("Requested temperature change from %.1f to %.1f" % ((self.last_set_temperature or 0), target_temperature))
                 self.target_temperature = target_temperature
                 self.last_set_temperature = self.target_temperature
                 self.target_mode = "manual"
                 self.last_set_mode = self.target_mode
                 self.schedule_thermostat_update()
+            else:
+                log.debug("Temperature %.1f unchanged: doing nothing" % self.last_set_temperature or 0)
 
     # Change the thermostat's operational mode.
     # According to the schema of the /homestatus API call
@@ -347,6 +350,7 @@ class NetatmoToken:
             # Check if mode has really changed since the last time it
             # has been set. This is useful to avoid publish/subscribe loops
             if mode.lower() != self.last_set_mode:
+                log.debug("Requested mode change from " + (self.last_set_mode or "<None>") + " to " + mode.lower())
                 self.target_mode = mode.lower()
                 self.last_set_mode = self.target_mode
                 # When mode is set to "manual", a temperature setpoint must
@@ -365,7 +369,22 @@ class NetatmoToken:
                             self.last_set_temperature = self.target_temperature
                         log.debug("Manual mode was requested and no temperature setpoint pending: applying one now (%.1f°)" % self.target_temperature)
                 self.schedule_thermostat_update()
+            else:
+                log.debug("Mode " + (self.last_set_mode or "<None>") + " unchanged: doing nothing")
     
+    # Simply update the last applied temperature setpoint and mode
+    # as learned from the Netatmo cloud, without sending any commands
+    # to the thermostat
+    def update_temperature(self, temp):
+        try:
+            log.debug("Updating last known applied temperature setpoint to %s (was %.1f)" % (temp, self.last_set_temperature or 0))
+            self.last_set_temperature = float(temp)
+        except ValueError:
+            log.warn("Invalid temperature setpoint value received from the Home+Control API: " + temp)
+    def update_mode(self, mode):
+        log.debug("Updating last known applied mode to %s (was %s)" % (mode, self.last_set_mode or "<None>"))
+        self.last_set_mode = mode
+
     # Check if there are temperature or mode updates pending
     def temperature_update_pending(self):
         return not (self.target_temperature is None)
