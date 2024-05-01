@@ -64,6 +64,19 @@ netatmo:
   # time countdown is set again to the following value (in seconds)
   min_request_idle_time: 3
 
+  # Commands sent to the thermostat can be set to expire after an established
+  # time. After expiry, the automatic schedule is usually restored.
+  # The following parameter specifies the duration of any such commands.
+  # Valid settings are:
+  # - 0                  "no expiry" (all commands will be persistent)
+  # - a decimal number   indicates the timespan of validity of each command
+  #                      in minutes
+  # - ~                  applies the default duration of manual settings
+  #                      as configured in the Home + Control mobile app
+  # This setting applies to all temperature/mode changes (including BOOST and
+  # OFF), except AUTO
+  default_duration: ~
+
 
 # ┌──────────────────────────────────────────────────────────┐
 # │ MQTT settings                                            │
@@ -82,6 +95,7 @@ mqtt:
     humidity: 'humidity'
     temperature_setpoint: 'temperature_setpoint'
     mode: 'mode'
+    setpoint_endtime: 'setpoint_endtime'
   subscribe_topics:
     # MQTT topics that are used to receive commands from the MQTT broker
     base_topic: 'smarther2/thermostat1/commands'

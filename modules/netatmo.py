@@ -1,4 +1,4 @@
-import os, sys, json, threading, requests, signal
+import os, sys, json, threading, requests, signal, time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from queue import Queue
 from threading import Timer, Lock
@@ -297,13 +297,24 @@ class NetatmoToken:
                 request_parameters_data["therm_setpoint_temperature"] = self.target_temperature
             if self.target_mode:
                 request_parameters_data["therm_setpoint_mode"] = self.target_mode
+            if settings['netatmo']['default_duration'] is not None:
+                if int(settings['netatmo']['default_duration']) > 0:
+                    request_parameters_data["therm_setpoint_end_time"] = int(time.time()) + int(settings['netatmo']['default_duration']) * 60
+                else:
+                    # 2147483647 is the magic value for "until a new order",
+                    # as documented in https://dev.netatmo.com/apidocumentation/control#setstate
+                    request_parameters_data["therm_setpoint_end_time"] = 2147483647
             request_parameters = self.prepare_room_request(settings['netatmo']['homeid'], settings['netatmo']['roomid'], request_parameters_data)
 
-            self.netatmo_api_call(request_url, request_parameters)
-
-            self.scheduled_request = None
-            self.target_temperature = None
-            self.target_mode = None
+            try:
+                self.netatmo_api_call(request_url, request_parameters)
+            finally:
+                # Make sure to clear pending updates even if an exception is raised
+                # by netatmo_api_call, so that future status change requests are
+                # handled correctly
+                self.scheduled_request = None
+                self.target_temperature = None
+                self.target_mode = None
     
     # Schedule a thermostat status update for a later time.
     # Cancel an already scheduled update, if any

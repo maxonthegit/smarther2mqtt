@@ -77,6 +77,7 @@ def main():
                 base_topic = settings['mqtt']['publish_topics']['base_topic']
                 mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['temperature'], payload = room_status['therm_measured_temperature'], retain = True)
                 mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['humidity'], payload = room_status['humidity'], retain = True)
+                mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['setpoint_endtime'], payload = (room_status['therm_setpoint_end_time'] or "0"), retain = True)
                 if not netatmo.temperature_update_pending():
                     mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['temperature_setpoint'], payload = room_status['therm_setpoint_temperature'], retain = True)
                     netatmo.update_temperature(room_status['therm_setpoint_temperature'])

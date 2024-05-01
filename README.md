@@ -100,7 +100,7 @@ The message that invites to contact the URL is similar to the following:
 Just access the URL, authenticate yourself on the Netatmo Connect cloud, grant the requested access and you are done.
 
 ## 5. Install the [MQTT binding][openhab-mqtt] in [openHAB][openhab]
-From the _Settings_/_Bindings_ menu of openHAB, install the [MQTT binding][openhab-mqtt].
+From the _Add-on Store_ menu of openHAB, install the [MQTT binding][openhab-mqtt].
 
 ## 6. Configure things and items in openHAB
 Configure things and item as follows:
@@ -108,8 +108,8 @@ Configure things and item as follows:
 * Add another _Generic MQTT_ thing (`mqtt:topic`) and configure it to use the _MQTT broker_ added above as bridge.
 * Edit the freshly added _Generic MQTT_ thing and open its _Channels_ tab (see also the [applicable section of the MQTT Things and Channels Binding guide](https://www.openhab.org/addons/bindings/mqtt.generic/#supported-things)). For each topic in the `smarther2mqtt` configuration file (both `publish_topics` and `subscribe_topics`) add a new _Channel_, picking its parameters as follows:
   * identifiers and labels can be arbitrary, but pick ones that will be easy to recognize later on
-  * channel types should be quite obvious: temperature and humidity topics will use numbers, whereas mode will use strings
-  * for each of the temperature and humidity topics just indicate the corresponding `publish_topic` from the `smarther2mqtt` configuration file as _status_ topic in each channel's settings
+  * channel types should be quite obvious: temperature and humidity topics will use numbers; mode will use strings; setpoint end time will use date/time
+  * for each of the temperature, humidity and setpoint end time topics just indicate the corresponding `publish_topic` from the `smarther2mqtt` configuration file as _status_ topic in each channel's settings
   * for each of the temperature setpoint and mode topics indicate the corresponding pair of `publish_topic` and `subscribe_topic` from the `smarther2mqtt` configuration file as _status_ and _command_ topics, respectively, in each channel's settings: for example, create a single channel to represent the temperature setpoint where you set `smarther2/thermostat1/sensors/temperature_setpoint` as _status_ topic and `smarther2/thermostat1/commands/temperature_setpoint` as _command_ topic
   * optionally, for the channel that represents the thermostat's operational mode you can indicate the following list of _Allowed states_ in the _Advanced options_ section: `AUTO,MANUAL,BOOST,OFF`. This will allow to easily set the state from the openHAB GUI
   * always indicate the full topic path (e.g., `smarther2/thermostat1/sensors/temperature`) in each channel
@@ -119,7 +119,7 @@ Configure things and item as follows:
 
 ### Synchronization logic
 Once this setup stage is reached, the [Smarther2][smarther2] thermostat can be controlled and its status be monitored through 3 different interfaces:
-1. the Legrand/Netatmo/BTicino Home+Control mobile app
+1. the Legrand/Netatmo/BTicino Home + Control mobile app
 2. Apple HomeKit (or, possibly, Google Home)
 3. the MQTT topics exposed by `smarther2mqtt`
 
@@ -143,7 +143,7 @@ Checking whether a retained message exists can be accomplished by simply subscri
   ```
   mosquitto_pub -n -r -t smarther2/thermostat1/commands/TOPIC_TO_BE_CLEARED
   ```
-* Similarly to environmental readings, also the last issued command is always synchronized among the 3 aforementioned interfaces. Therefore, changes requested via the Home+Control app are also reflected in the temperature setpoint item in openHAB. \
+* Similarly to environmental readings, also the last issued command is always synchronized among the 3 aforementioned interfaces. Therefore, changes requested via the Home + Control app are also reflected in the temperature setpoint item in openHAB. \
 Also in this case, the refresh may take a short time due to the `polling_interval` setting.
 
 
@@ -151,7 +151,7 @@ Also in this case, the refresh may take a short time due to the `polling_interva
 Assuming that the [Mosquitto][mosquitto] MQTT broker is being used, it is possible to verify which messages are exchanged by `smarther2mqtt` by installing the `mosquitto-clients` package and running commands similar to the following:
 ```
 # To verify information published by smarther2mqtt (i.e., thermostat sensor readings)
-for SENSOR in temperature humidity temperature_setpoint mode; do echo -n "-t smarther2/thermostat1/sensors/$SENSOR "; done | xargs mosquitto_sub
+for SENSOR in temperature humidity temperature_setpoint mode setpoint_endtime; do echo -n "-t smarther2/thermostat1/sensors/$SENSOR "; done | xargs mosquitto_sub
 
 # To verify commands issued by smarther2mqtt
 echo auto | mosquitto_pub -t smarther2/thermostat1/commands/mode -l
@@ -187,8 +187,12 @@ To the best of my knowledge, each thermostat generation is meant to work with th
   * Current operational mode reading (`AUTO`/`MANUAL`/`BOOST`/`OFF`)
   * Temperature setpoint setting
   * Operational mode setting (`AUTO`/`MANUAL`/`BOOST`/`OFF`)
+    * Changing the temperature setpoint automatically switches the operational mode of the thermostat to `MANUAL`
 * `smarther2mqtt` includes an implementation of the Netatmo Connect API [Authorization code grant type][netatmo-oauth2]. For this purpose, it temporarily runs a web server that is used to serve a callback URL where the authorization token is received. This service _never_ needs to be exposed on the Internet and terminates as soon as the grant is obtained.
-* Changing the temperature setpoint automatically switches the operational mode of the thermostat to `MANUAL`. Moreover, this change may expire according to the _default duration_ of manual settings that has been configured in the Home + Control app: after expiry, the previous operational mode should be automatically restored.
+* Temperature setpoints and operational modes changed via `smarther2mqtt` (by sending commands to the MQTT `subscribe_topics`) can be set to expire after a configurable timespan:
+  * an established timespan specified in the `smarther2mqtt` configuration file, or
+  * the _default duration_ of manual settings that has been configured in the Home + Control app, or
+  * never (persistent setting)
 
 ## Requirements
 * Excerpts from the [Smarther2 FAQ][smarther2] claim that the Smarther2 thermostat can be controlled from the local Wi-Fi network even in the absence of a working Internet connection. In practice, the native Legrand/Netatmo/BTicino Home + Control app refuses to start or fails to reach any thermostats without an Internet connection. The "local" operational mode, which may therefore only be supported via Apple Home (again, I don't know about Google Home) is anyway out of the scope of this tool: **`smarther2mqtt` requires an Internet connection and _always_ relies on it to control a thermostat** by leveraging the API from the Netatmo Connect cloud.
