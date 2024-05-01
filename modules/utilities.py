@@ -24,7 +24,7 @@ settings = yaml.safe_load(settings_file)
 settings_file.close()
 
 # Set up logger
-log = logging.getLogger('smarther2-mqtt')
+log = logging.getLogger('smarther2mqtt')
 logging_level = logging.DEBUG if settings['debug'] else logging.INFO
 logging.basicConfig(format="[%(asctime)s] %(levelname)s:%(name)s:%(funcName)s:%(lineno)d - %(message)s", datefmt="%Y/%m/%d %H:%M:%S", level = logging_level)
 

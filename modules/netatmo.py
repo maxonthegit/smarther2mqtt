@@ -31,7 +31,7 @@ def MinimalHTTPRequestHandler(redirect_url, msg_queue):
                 self.send_response_only(200)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write("<html><head><title>smarther2-mqtt</title></head><body><p>Authorization successfully acquired. You can now close this tab/window.</p></body></html>".encode("utf-8"))
+                self.wfile.write("<html><head><title>smarther2mqtt</title></head><body><p>Authorization successfully acquired. You can now close this tab/window.</p></body></html>".encode("utf-8"))
                 log.debug("Success page sent to HTTP client")
                 self.msg_queue.put(netatmo_grant_code)
             else:

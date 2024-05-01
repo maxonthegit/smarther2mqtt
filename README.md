@@ -95,7 +95,7 @@ sudo docker logs smarther2mqtt
 ```
 The message that invites to contact the URL is similar to the following:
 ```
-[2023/04/14 19:26:53] INFO:smarther2-mqtt:publish:34 - The *Netatmo Smarther2* tool requires authorization. Please grant it by accessing this web page: http://192.168.10.150:9090/authorize
+[2023/04/14 19:26:53] INFO:smarther2mqtt:publish:34 - The *Netatmo Smarther2* tool requires authorization. Please grant it by accessing this web page: http://192.168.10.150:9090/authorize
 ```
 Just access the URL, authenticate yourself on the Netatmo Connect cloud, grant the requested access and you are done.
 
