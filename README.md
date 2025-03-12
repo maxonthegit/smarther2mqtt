@@ -35,12 +35,12 @@ Let **`HOST_IPADDRESS`** be the IP address of the host on which `smarther2mqtt` 
 
 Setting up `smarther2mqtt` for exposing a [Smarther2][smarther2] thermostat in openHAB involves a few steps:
 
-1. Register an app on the [Netatmo Connect][netatmo-developer] portal
-2. Install an MQTT broker (or pick an existing one)
-3. Configure `smarther2mqtt`
-4. Run `smarther2mqtt`
-5. Install the [MQTT binding][openhab-mqtt] in [openHAB][openhab]
-6. Configure things and items in openHAB
+1. Registering an app on the [Netatmo Connect][netatmo-developer] portal
+2. Installing an MQTT broker (or pick an existing one)
+3. Configuring `smarther2mqtt`
+4. Running `smarther2mqtt`
+5. Installing the [MQTT binding][openhab-mqtt] in [openHAB][openhab]
+6. Configuring things and items in openHAB
 
 These steps are illustrated in detail below.
 
@@ -79,8 +79,8 @@ Comments inside the provided template configuration file should be fairly self-e
 Execute the following sequence of commands to build the container image, create a container and execute it.
 
 _Note about network mode_ - The correct network mode to be used depends on your system settings:
-* `bridge` ensures isolation, hence is deemed more safe (`smarther2mqtt` will be able to reach your whole network but prevented from exposing unintended services). It is fine to use as long as the MQTT broker listens on the host IP address (i.e., not just `127.0.0.1`) or is executed on a different host
-* `host`, used in this example, is slightly less safe (`smarther2mqtt` does not normally expose any services anyway) but allows to reach a host-side MQTT broker listening on `127.0.0.1` only
+* `bridge` ensures isolation, hence is deemed more safe (`smarther2mqtt` will be able to reach your whole network but prevented from exposing unintended services). It is fine to use as long as the MQTT broker is set up to listen on the host IP address (i.e., not just `127.0.0.1`) or is executed on a different host
+* `host`, used in this example, is slightly less safe (`smarther2mqtt` does not normally expose any services anyway), but allows to reach a host-side MQTT broker that listens on `127.0.0.1` only (like for the case of a default [Mosquitto][mosquitto] setup)
 
 
 ```
