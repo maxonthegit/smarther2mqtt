@@ -51,7 +51,7 @@ netatmo:
   # - Max 500 requests per hour (means ~8 per minute, namely ~one every 8 seconds)
   # It should be fairly hard to overcome these limits but, as a general advice,
   # this interval should not be set to any values lower than 10 (seconds)
-  polling_interval: 10
+  polling_interval: 15
 
   # To help stay within the aforementioned rate limits, before sending
   # certain requests to the Netatmo API a minimum time window of "silence"
