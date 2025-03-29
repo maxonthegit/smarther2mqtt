@@ -31,14 +31,19 @@ def handle_received_command(client, userdata, message):
                 netatmo.set_mode(mode_user_to_NA[msg])
             else:
                 log.warning("Invalid mode received: %s", msg)
-    except:
-        # According to https://github.com/eclipse/paho.mqtt.python/issues/365,
-        # exceptions in the callback function are always raised. On the
-        # other hand, in https://stackoverflow.com/questions/66933791/why-my-mqtt-client-cannot-reconnect-when-an-exception-occurs
-        # is explained that the callback function itself is the correct
-        # (and, possibly, only) place where such exceptions should be
-        # catched
-        pass
+    except Exception as e:
+        # In recent releases of paho-mqtt, exceptions raised inside
+        # callback functions may have two alternative effects:
+        # a) if the exception is not handled in the callback function
+        #    *and* is not suppressed using parameter suppress_exceptions
+        #    (see https://eclipse.dev/paho/files/paho.mqtt.python/html/client.html#callbacks),
+        #    then it is raised (and cannot be catched in the main thread)
+        #    and hangs the callback handler altogether
+        # b) if the exception is haneld in the callback function *or*
+        #    is suppressed using parameter suppress_exceptions, then
+        #    the callback handler remains valid
+        # In this case option b) is applied
+        log.error("Exception raised while processing received message '%s': %s" % (message.payload, repr(e)))
 
 
 def main():
@@ -47,6 +52,7 @@ def main():
         obtain_netatmo_token(netatmo)
 
     mqttc = mqtt_init()
+
     base_topic = settings['mqtt']['subscribe_topics']['base_topic']
     # Subscribe to selected MQTT topics for which messages are expected from the broker
     mqttc.subscribe(base_topic + '/+', 0)
