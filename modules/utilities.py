@@ -38,7 +38,7 @@ class LogRequester:
 class TelegramRequester:
     def publish(self, message):
         telegram_base_url = "https://api.telegram.org/bot%s/sendMessage" %settings['telegram']['bot_token']
-        message = re.sub("\.", "\\.", message)
+        message = re.sub(r"\.", "\\.", message)
         json_dict = {
             'chat_id': settings['telegram']['chat_id'],
             'parse_mode': 'MarkdownV2',
