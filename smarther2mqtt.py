@@ -37,12 +37,13 @@ def handle_received_command(client, userdata, message):
         # a) if the exception is not handled in the callback function
         #    *and* is not suppressed using parameter suppress_exceptions
         #    (see https://eclipse.dev/paho/files/paho.mqtt.python/html/client.html#callbacks),
-        #    then it is raised (and cannot be catched in the main thread)
-        #    and hangs the callback handler altogether
+        #    then it is raised and hangs the callback handler altogether
+        #    (unfortunately it cannot be catched in the main thread)
         # b) if the exception is haneld in the callback function *or*
         #    is suppressed using parameter suppress_exceptions, then
-        #    the callback handler remains valid
-        # In this case option b) is applied
+        #    the callback handler remains valid (and, of course, the
+        #    exception is not raised)
+        # In this case option b) is applied.
         log.error("Exception raised while processing received message '%s': %s" % (message.payload, repr(e)))
 
 
@@ -62,17 +63,29 @@ def main():
     mqttc.loop_start()
 
     log.info("Starting polling cycle")
+    first_iteration = True
     while True:
         signal.signal(signal.SIGTERM, signal_to_interrupt)
         try:
             # Start polling cycle
             log.debug("(Re)starting polling cycle")
             while True:
+                if not first_iteration:
+                    log.debug("Waiting %i seconds" % settings['netatmo']['polling_interval'])
+                    time.sleep(settings['netatmo']['polling_interval'])
+                first_iteration = False
+
                 # Get information about the whole home
                 home_status_string = netatmo.query_homestatus(settings['netatmo']['homeid'])
                 log.debug("Received home status: %s" % home_status_string)
                 home_status = json.loads(home_status_string)
                 log.debug("JSON-decoded home status: %s" % json.dumps(home_status))
+
+                # Check whether any application-level errors have been
+                # reported (see https://dev.netatmo.com/apidocumentation/general#status-ok)
+                if 'errors' in home_status['body']:
+                    log.warning("API returned application-evel error code %i. Will try again at next polling cycle" % home_status['body']['errors'][0]['code'])
+                    continue
 
                 # Retrieve information about the room of interest
                 room_status = get_room_in_home(home_status['body']['home'], settings['netatmo']['roomid'])
@@ -91,10 +104,8 @@ def main():
                     mqttc.publish(base_topic + '/' + settings['mqtt']['publish_topics']['mode'], payload = mode_NA_to_user[room_status['therm_setpoint_mode']], retain = True)
                     netatmo.update_mode(room_status['therm_setpoint_mode'])
 
-                time.sleep(settings['netatmo']['polling_interval'])
         except requests.ConnectionError as e:
             log.error("Error while connecting to server: %s. Restarting polling cycle" % repr(e))
-            pass
         except requests.HTTPError as e:
             log.error("HTTP exception in polling cycle: %s" % repr(e))
             log.debug("Obtaining a new token and restarting the loop")
@@ -104,8 +115,6 @@ def main():
             return
         except Exception as e:
             log.error("Unknown exception occurred: %s" % repr(e))
-            log.debug("Waiting 5 seconds and restarting the loop")
-            time.sleep(5)
 
 
 
