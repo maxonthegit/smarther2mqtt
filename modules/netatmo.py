@@ -302,8 +302,11 @@ class NetatmoToken:
                     request_parameters_data["therm_setpoint_end_time"] = int(time.time()) + int(settings['netatmo']['default_duration']) * 60
                 else:
                     # 2147483647 is the magic value for "until a new order",
-                    # as documented in https://dev.netatmo.com/apidocumentation/control#setstate
-                    request_parameters_data["therm_setpoint_end_time"] = 2147483647
+                    # as documented in https://dev.netatmo.com/apidocumentation/control#setstate.
+                    # However, it seems to cause HTTP error 403 with description "Service
+                    # unavailable - The request is blocked". A slightly lower value
+                    # is therefore used here
+                    request_parameters_data["therm_setpoint_end_time"] = 2147483646
             request_parameters = self.prepare_room_request(settings['netatmo']['homeid'], settings['netatmo']['roomid'], request_parameters_data)
 
             try:
