@@ -81,12 +81,27 @@ def main():
                 home_status = json.loads(home_status_string)
                 log.debug("JSON-decoded home status: %s" % json.dumps(home_status))
 
-                # Check whether any application-level errors have been
-                # reported (see https://dev.netatmo.com/apidocumentation/general#status-ok)
-                if 'errors' in home_status['body']:
-                    log.warning("API returned application-evel error code %i. Will try again at next polling cycle" % home_status['body']['errors'][0]['code'])
+                # Check whether global API rate limits (which may occasionally occur)
+                # have been hit. This is signaled by the following response body in an
+                # HTTP 429 error response:
+                # {
+                #   "error": {
+                #     "code": 11,
+                #     "message": "Failed to enter concurrency limited section"
+                #   }
+                # }
+                if 'error' in home_status:
+                    log.warning("API returned system-wide error: %i. Will try again at next polling cycle" % home_status['erorr']['message'])
                     continue
+                else:
+                    # The response is assumed to have a 'body' key at this point
 
+                    # Check whether any application-level errors have been
+                    # reported (see https://dev.netatmo.com/apidocumentation/general#status-ok)
+                    if 'errors' in home_status['body']:
+                        log.warning("API returned application-evel error code %i. Will try again at next polling cycle" % home_status['body']['errors'][0]['code'])
+                        continue
+                
                 # Retrieve information about the room of interest
                 room_status = get_room_in_home(home_status['body']['home'], settings['netatmo']['roomid'])
                 log.debug("Room status: %s" % room_status)

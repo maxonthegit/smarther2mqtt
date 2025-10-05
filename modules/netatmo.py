@@ -15,10 +15,10 @@ def MinimalHTTPRequestHandler(redirect_url, msg_queue):
             log.debug("Serving web page %s" % self.path)
             if self.path == "/authorize":
                 log.debug("Redirecting to Netatmo authorization page %s" % self.redirect_url)
-                self.send_response_only(301)
+                self.send_response_only(302)
+                self.send_header("Cache-Control: no-store", self.redirect_url)
                 self.send_header("Location", self.redirect_url)
                 self.end_headers()
-                log.debug("HTTP 301 code returned to client")
             elif self.path[:12] == "/token?code=":
                 # The user has granted the application access to the Netatmo API,
                 # and an authorization code has been returned.
@@ -243,11 +243,24 @@ class NetatmoToken:
                     # Likely a temporary server error
                     log.warn("Possible server error: failing silently")
                     return r.text
+                if r.status_code == 429:
+                    j = json.loads(r.text)
+                    if j['error']['code'] == 11:
+                        log.warn("Rate limit hit. Holding request for 30 seconds, then retrying")
+                        time.sleep(30)
+                        return self.netatmo_api_call(url, second_attempt=True)
                 log.error("This error cannot be handled")
                 raise
             else:
-                log.error("HTTP error %i while performing API call %s: %s" % (r.status_code, url, repr(e)))
-                raise
+                if r.status_code == 429:
+                    j = json.loads(r.text)
+                    if j['error']['code'] == 11:
+                        log.warn("Rate limit hit again. Failing silently and giving up")
+                        # JSON error bodies are processed by the main loop anyway
+                        return r.text
+                else:
+                    log.error("HTTP error %i while performing API call %s: %s" % (r.status_code, url, repr(e)))
+                    raise
         return r.text
 
     # Methods for specific API calls follow
