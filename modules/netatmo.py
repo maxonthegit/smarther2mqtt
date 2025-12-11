@@ -231,36 +231,34 @@ class NetatmoToken:
             raise
         except requests.HTTPError as e:
             log.warn("HTTP error %i while performing API call %s: %s, details: %s" % (r.status_code, url, repr(e), r.text))
-            if not second_attempt:
-                if r.status_code == 403:
-                    j = json.loads(r.text)
-                    if j['error']['code'] == 3:
+            if r.status_code >= 500 and r.status_code <=599:
+                # Likely a temporary server error
+                log.warn("Possible server error: failing silently")
+                return r.text
+            if r.status_code == 403:
+                j = json.loads(r.text)
+                if j['error']['code'] == 3:
+                    if not second_attempt:
                         log.warn("Access token expired")
                         self.refresh_token()
                         log.info("Token successfully refreshed. Attempting to repeat last HTTP request")
                         return self.netatmo_api_call(url, second_attempt=True)
-                if r.status_code >= 500 and r.status_code <=599:
-                    # Likely a temporary server error
-                    log.warn("Possible server error: failing silently")
-                    return r.text
-                if r.status_code == 429:
-                    j = json.loads(r.text)
-                    if j['error']['code'] == 11:
+                    else:
+                        log.error("Token expired error even after refreshing token (HTTP error %i while performing API call %s: %s)" % (r.status_code, url, repr(e)))
+                        raise
+            if r.status_code == 429:
+                j = json.loads(r.text)
+                if j['error']['code'] == 11:
+                    if not second_attempt:
                         log.warn("Rate limit hit. Holding request for 30 seconds, then retrying")
                         time.sleep(30)
                         return self.netatmo_api_call(url, second_attempt=True)
-                log.error("This error cannot be handled")
-                raise
-            else:
-                if r.status_code == 429:
-                    j = json.loads(r.text)
-                    if j['error']['code'] == 11:
+                    else:
                         log.warn("Rate limit hit again. Failing silently and giving up")
                         # JSON error bodies are processed by the main loop anyway
                         return r.text
-                else:
-                    log.error("HTTP error %i while performing API call %s: %s" % (r.status_code, url, repr(e)))
-                    raise
+            log.error("HTTP error %i while performing API call %s: %s" % (r.status_code, url, repr(e)))
+            raise
         return r.text
 
     # Methods for specific API calls follow
