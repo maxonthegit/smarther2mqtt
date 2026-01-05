@@ -212,7 +212,7 @@ class NetatmoToken:
 
     # Invoke a Netatmo API call. Grant token is automatically
     # refreshed in case it has expired
-    def netatmo_api_call(self, url, request_parameters=None, second_attempt=False):
+    def netatmo_api_call(self, url, request_parameters=None, attempt_errors=[]):
         request_headers = {
             'accept': 'application/json',
             'Authorization': 'Bearer ' + self.token['access_token']
@@ -238,21 +238,23 @@ class NetatmoToken:
             if r.status_code == 403:
                 j = json.loads(r.text)
                 if j['error']['code'] == 3:
-                    if not second_attempt:
+                    if (403, 3) not in attempt_errors:
+                        # Error 403, code 3 has never occurred in any of the currently active recursive calls
                         log.warn("Access token expired")
                         self.refresh_token()
                         log.info("Token successfully refreshed. Attempting to repeat last HTTP request")
-                        return self.netatmo_api_call(url, second_attempt=True)
+                        return self.netatmo_api_call(url, attempt_errors + [(403, 3)])
                     else:
                         log.error("Token expired error even after refreshing token (HTTP error %i while performing API call %s: %s)" % (r.status_code, url, repr(e)))
                         raise
             if r.status_code == 429:
                 j = json.loads(r.text)
                 if j['error']['code'] == 11:
-                    if not second_attempt:
+                    if not attempt_errors or attempt_errors[-1] != (429, 11):
+                        # Error 429, code 11 is not the latest occurred in the currently active recursive calls
                         log.warn("Rate limit hit. Holding request for 30 seconds, then retrying")
                         time.sleep(30)
-                        return self.netatmo_api_call(url, second_attempt=True)
+                        return self.netatmo_api_call(url, attempt_errors + [(429, 11)])
                     else:
                         log.warn("Rate limit hit again. Failing silently and giving up")
                         # JSON error bodies are processed by the main loop anyway
