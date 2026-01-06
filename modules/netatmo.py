@@ -243,7 +243,7 @@ class NetatmoToken:
                         log.warn("Access token expired")
                         self.refresh_token()
                         log.info("Token successfully refreshed. Attempting to repeat last HTTP request")
-                        return self.netatmo_api_call(url, attempt_errors + [(403, 3)])
+                        return self.netatmo_api_call(url, request_parameters, attempt_errors + [(403, 3)])
                     else:
                         log.error("Token expired error even after refreshing token (HTTP error %i while performing API call %s: %s)" % (r.status_code, url, repr(e)))
                         raise
@@ -254,7 +254,7 @@ class NetatmoToken:
                         # Error 429, code 11 is not the latest occurred in the currently active recursive calls
                         log.warn("Rate limit hit. Holding request for 30 seconds, then retrying")
                         time.sleep(30)
-                        return self.netatmo_api_call(url, attempt_errors + [(429, 11)])
+                        return self.netatmo_api_call(url, request_parameters, attempt_errors + [(429, 11)])
                     else:
                         log.warn("Rate limit hit again. Failing silently and giving up")
                         # JSON error bodies are processed by the main loop anyway
